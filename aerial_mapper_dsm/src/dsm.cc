@@ -33,8 +33,8 @@ Dsm::Dsm(const Settings& settings, grid_map::GridMap* map)
   }
 }
 
-void Dsm::initializeAndFillKdTree(
-    const AlignedType<std::vector, Eigen::Vector3d>::type& point_cloud) {
+//
+void Dsm::initializeAndFillKdTree(const AlignedType<std::vector, Eigen::Vector3d>::type& point_cloud) {
   // Insert pointcloud in kdtree.
   cloud_kdtree_.pts.resize(point_cloud.size());
   LOG(INFO) << "Num points: " << point_cloud.size();
@@ -45,29 +45,31 @@ void Dsm::initializeAndFillKdTree(
   }
 
   pc2kd_.reset(new PC2KD(cloud_kdtree_));
-  kd_tree_.reset(
-      new my_kd_tree_t(kDimensionKdTree, *pc2kd_,
-                       nanoflann::KDTreeSingleIndexAdaptorParams(kMaxLeaf)));
+  kd_tree_.reset( new my_kd_tree_t(kDimensionKdTree, *pc2kd_, 
+                                    nanoflann::KDTreeSingleIndexAdaptorParams(kMaxLeaf)));
   kd_tree_->buildIndex();
-}
+}//end function initializeAndFillKdTree
 
+
+//更新grid的高度z，详见算法实现文档中的IDW解释
 void Dsm::updateElevationLayer(grid_map::GridMap* map) {
   CHECK(map);
   const ros::Time time1 = ros::Time::now();
+  //遍历所有的grid
   for (grid_map::GridMapIterator it(*map); !it.isPastEnd(); ++it) {
+    //1.获取grid的2d位置，然后在所有的kdtree中寻找哪些grid在这个半径范围内，半径默认设置等于1米
     grid_map::Position position;
     map->getPosition(*it, position);
     std::vector<std::pair<int, double> > indices_dists;
-    nanoflann::RadiusResultSet<double, int> result_set(
-        settings_.interpolation_radius, indices_dists);
+    nanoflann::RadiusResultSet<double, int> result_set(settings_.interpolation_radius, indices_dists);
     const double query_pt[3] = {position.x(), position.y(), 0.0};
     kd_tree_->findNeighbors(result_set, query_pt, nanoflann::SearchParams());
 
+    //如果按照1米范围内搜索不到那么就不停地扩大搜索范围，最大扩大到7米
     if (true) {
       double lambda = 1.0;
       while (result_set.size() == 0u) {
-        nanoflann::RadiusResultSet<double, int> tmp(
-            lambda * settings_.interpolation_radius, indices_dists);
+        nanoflann::RadiusResultSet<double, int> tmp(lambda * settings_.interpolation_radius, indices_dists);
         kd_tree_->findNeighbors(tmp, query_pt, nanoflann::SearchParams());
         lambda *= 1.1;
         if (lambda * settings_.interpolation_radius > 7.0) {
@@ -81,8 +83,8 @@ void Dsm::updateElevationLayer(grid_map::GridMap* map) {
       std::vector<double> distances;
       std::vector<double> heights;
       CHECK(result_set.size() > 0);
-      distances.clear();
-      heights.clear();
+      distances.clear();//距离这个gird多远的距离
+      heights.clear();//每个点的高度
       for (const std::pair<int, double>& s : result_set.m_indices_dists) {
         distances.push_back(s.second);
         heights.push_back(cloud_kdtree_.pts[s.first].z);
@@ -93,6 +95,7 @@ void Dsm::updateElevationLayer(grid_map::GridMap* map) {
       double idw_numerator = 0.0;
       double idw_denominator = 0.0;
       bool idw_perfect_match = false;
+      //
       for (size_t i = 0u; i < heights.size(); ++i) {
         if (!idw_perfect_match) {
           CHECK(distances[i] > 0.0);
@@ -108,7 +111,7 @@ void Dsm::updateElevationLayer(grid_map::GridMap* map) {
   const ros::Time time2 = ros::Time::now();
   const ros::Duration& delta_time = time2 - time1;
   VLOG(1) << "dt(update-dsm, single-thread): " << delta_time;
-}
+}//end function updateElevationLayer
 
 void Dsm::updateElevationLayerMultiThreaded(grid_map::GridMap* map) {
   CHECK(map);
@@ -183,20 +186,19 @@ void Dsm::updateElevationLayerMultiThreaded(grid_map::GridMap* map) {
   VLOG(1) << "dt(update-dsm, multi-thread): " << delta_time;
 }
 
-void Dsm::process(
-    const AlignedType<std::vector, Eigen::Vector3d>::type& point_cloud,
-    grid_map::GridMap* map) {
+void Dsm::process( const AlignedType<std::vector, Eigen::Vector3d>::type& point_cloud,
+                    grid_map::GridMap* map) {
   if (point_cloud.empty()) {
     LOG(WARNING) << "Passed empty point cloud to DSM module";
     return;
   }
 
   CHECK(map);
-  initializeAndFillKdTree(point_cloud);
+  initializeAndFillKdTree(point_cloud);//使用输入的所有三维点建立kdtree
   if (settings_.use_multi_threads) {
-    updateElevationLayerMultiThreaded(map);
+    updateElevationLayerMultiThreaded(map);//
   } else {
-    updateElevationLayer(map);
+    updateElevationLayer(map);//详见算法实现文档
   }
 }
 

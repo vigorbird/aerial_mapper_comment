@@ -39,9 +39,9 @@ OrthoBackwardGrid::OrthoBackwardGrid(
   }
 }
 
-void OrthoBackwardGrid::updateOrthomosaicLayer(const Poses& T_G_Cs,
-                                               const Images& images,
-                                               grid_map::GridMap* map) const {
+void OrthoBackwardGrid::updateOrthomosaicLayer(const Poses& T_G_Cs,//所有的位姿
+                                               const Images& images,//所有的图像
+                                               grid_map::GridMap* map) const {//grid地图
   CHECK(ncameras_);
   const aslam::Camera& camera = ncameras_->getCamera(kFrameIdx);
 
@@ -53,32 +53,30 @@ void OrthoBackwardGrid::updateOrthomosaicLayer(const Poses& T_G_Cs,
   grid_map::Matrix& layer_colored_ortho = (*map)["colored_ortho"];
 
   ros::Time time1 = ros::Time::now();
+  //遍历所有的grid
   for (grid_map::GridMapIterator it(*map); !it.isPastEnd(); ++it) {
     grid_map::Position position;
     map->getPosition(*it, position);
     const grid_map::Index index(*it);
     double x = index(0);
     double y = index(1);
-    Eigen::Vector3d landmark_UTM =
-        Eigen::Vector3d(position.x(), position.y(), layer_elevation(x, y));
+    //根据grid信息，获取这个grid对应的xyz坐标
+    Eigen::Vector3d landmark_UTM =  Eigen::Vector3d(position.x(), position.y(), layer_elevation(x, y));
 
     // Loop over all images.
+    //遍历所有的图像，判断这个grid是否能被这个图像观测到
     for (size_t i = 0u; i < images.size(); ++i) {
-      const Eigen::Vector3d& C_landmark =
-          T_G_Cs[i].inverse().transform(landmark_UTM);
+      const Eigen::Vector3d& C_landmark =  T_G_Cs[i].inverse().transform(landmark_UTM);//gird在图像坐标系下的坐标
       Eigen::Vector2d keypoint;
-      const aslam::ProjectionResult& projection_result =
-          camera.project3(C_landmark, &keypoint);
+      const aslam::ProjectionResult& projection_result = camera.project3(C_landmark, &keypoint);
 
       // Check if keypoint visible.
       const bool keypoint_visible =
           (keypoint(0) >= 0.0) && (keypoint(1) >= 0.0) &&
           (keypoint(0) < static_cast<double>(camera.imageWidth())) &&
           (keypoint(1) < static_cast<double>(camera.imageHeight())) &&
-          (projection_result.getDetailedStatus() !=
-           aslam::ProjectionResult::POINT_BEHIND_CAMERA) &&
-          (projection_result.getDetailedStatus() !=
-           aslam::ProjectionResult::PROJECTION_INVALID);
+          (projection_result.getDetailedStatus() != aslam::ProjectionResult::POINT_BEHIND_CAMERA) &&
+          (projection_result.getDetailedStatus() != aslam::ProjectionResult::PROJECTION_INVALID);
       if (keypoint_visible) {
         Eigen::Vector3d u = C_landmark;
         // Observation vector.
@@ -93,8 +91,8 @@ void OrthoBackwardGrid::updateOrthomosaicLayer(const Poses& T_G_Cs,
           layer_num_observations(x, y) += layer_num_observations(x, y);
 
           // Retrieve pixel intensity.
-          const Eigen::Vector3d& C_landmark =
-              T_G_Cs[i].inverse().transform(landmark_UTM);
+          //再将这个点投影到图像上，获取对应的像素坐标
+          const Eigen::Vector3d& C_landmark = T_G_Cs[i].inverse().transform(landmark_UTM);
           Eigen::Vector2d keypoint;
           camera.project3(C_landmark, &keypoint);
           const int kp_y = std::min(static_cast<int>(std::round(keypoint(1))),
@@ -103,13 +101,12 @@ void OrthoBackwardGrid::updateOrthomosaicLayer(const Poses& T_G_Cs,
                                     static_cast<int>(camera.imageWidth()) - 1);
           if (settings_.colored_ortho) {
             const cv::Vec3b rgb = images[i].at<cv::Vec3b>(kp_y, kp_x);
-            const Eigen::Vector3f color_vector_bgr(
-                static_cast<float>(rgb[2]) / 255.0,
-                static_cast<float>(rgb[1]) / 255.0,
-                static_cast<float>(rgb[0]) / 255.0);
+            const Eigen::Vector3f color_vector_bgr( static_cast<float>(rgb[2]) / 255.0,
+                                                    static_cast<float>(rgb[1]) / 255.0,
+                                                    static_cast<float>(rgb[0]) / 255.0);
             float color_concatenated;
             grid_map::colorVectorToValue(color_vector_bgr, color_concatenated);
-            layer_colored_ortho(x, y) = color_concatenated;
+            layer_colored_ortho(x, y) = color_concatenated;//作者选择一个最好的角度进行赋值
           } else {
             const double gray_value = images[i].at<uchar>(kp_y, kp_x);
             // Update orthomosaic.
@@ -123,10 +120,11 @@ void OrthoBackwardGrid::updateOrthomosaicLayer(const Poses& T_G_Cs,
   const ros::Time time2 = ros::Time::now();
   const ros::Duration& delta_time = time2 - time1;
   VLOG(1) << "dt(backward_grid, single-thread): " << delta_time;
-}
+}//end function updateOrthomosaicLayer
 
-void OrthoBackwardGrid::updateOrthomosaicLayerMultiThreaded(
-    const Poses& T_G_Cs, const Images& images, grid_map::GridMap* map) const {
+void OrthoBackwardGrid::updateOrthomosaicLayerMultiThreaded(const Poses& T_G_Cs, 
+                                                            const Images& images, 
+                                                            grid_map::GridMap* map) const {
   CHECK(ncameras_);
   const aslam::Camera& camera = ncameras_->getCamera(kFrameIdx);
 
@@ -234,7 +232,7 @@ void OrthoBackwardGrid::process(const Poses& T_G_Bs, const Images& images,
   if (settings_.use_multi_threads) {
     updateOrthomosaicLayerMultiThreaded(T_G_Cs, images, map);
   } else {
-    updateOrthomosaicLayer(T_G_Cs, images, map);
+    updateOrthomosaicLayer(T_G_Cs, images, map);//将gird反投影回图像，然后为每个gird赋值颜色
   }
 }
 

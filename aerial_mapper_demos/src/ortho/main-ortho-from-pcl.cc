@@ -74,8 +74,7 @@ int main(int argc, char** argv) {
   // Load camera rig from file.
   io::AerialMapperIO io_handler;
   const std::string& filename_camera_rig_yaml = base + filename_camera_rig;
-  std::shared_ptr<aslam::NCamera> ncameras =
-      io_handler.loadCameraRigFromFile(filename_camera_rig_yaml);
+  std::shared_ptr<aslam::NCamera> ncameras = io_handler.loadCameraRigFromFile(filename_camera_rig_yaml);
   CHECK(ncameras);
 
   // Load body poses from file.
@@ -100,8 +99,7 @@ int main(int argc, char** argv) {
   } else {
     // .. or generate via dense reconstruction from poses and images.
     stereo::Settings settings_dense_pcl;
-    settings_dense_pcl.use_every_nth_image =
-        FLAGS_dense_pcl_use_every_nth_image;
+    settings_dense_pcl.use_every_nth_image = FLAGS_dense_pcl_use_every_nth_image;
     LOG(INFO) << "Perform dense reconstruction using planar rectification.";
     stereo::BlockMatchingParameters block_matching_params;
     block_matching_params.use_BM = FLAGS_use_BM;
@@ -112,8 +110,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Initialize layered map.";
   grid_map::Settings settings_aerial_grid_map;
   settings_aerial_grid_map.center_easting = FLAGS_ortho_from_pcl_center_easting;
-  settings_aerial_grid_map.center_northing =
-      FLAGS_ortho_from_pcl_center_northing;
+  settings_aerial_grid_map.center_northing = FLAGS_ortho_from_pcl_center_northing;
   settings_aerial_grid_map.delta_easting = FLAGS_ortho_from_pcl_delta_easting;
   settings_aerial_grid_map.delta_northing = FLAGS_ortho_from_pcl_delta_northing;
   settings_aerial_grid_map.resolution = FLAGS_ortho_from_pcl_resolution;
@@ -122,18 +119,17 @@ int main(int argc, char** argv) {
   // Orthomosaic from point cloud.
   ortho::Settings settings;
   settings.interpolation_radius = FLAGS_ortho_from_pcl_interpolation_radius;
-  settings.use_adaptive_interpolation =
-      FLAGS_ortho_from_pcl_use_adaptive_interpolation;
-  settings.show_orthomosaic_opencv =
-      FLAGS_ortho_from_pcl_show_orthomosaic_opencv;
-  settings.orthomosaic_jpg_filename =
-      FLAGS_ortho_from_pcl_orthomosaic_jpg_filename;
+  settings.use_adaptive_interpolation = FLAGS_ortho_from_pcl_use_adaptive_interpolation;
+  settings.show_orthomosaic_opencv = FLAGS_ortho_from_pcl_show_orthomosaic_opencv;
+  settings.orthomosaic_jpg_filename = FLAGS_ortho_from_pcl_orthomosaic_jpg_filename;
   CHECK(point_cloud.size() > 0);
   CHECK(point_cloud.size() == point_cloud_intensities.size());
 
   // Generate the orthomosaic from the point cloud.
   ortho::OrthoFromPcl mosaic(settings);
-  mosaic.process(point_cloud, point_cloud_intensities, map.getMutable());
+  //搜索 OrthoFromPcl::process
+  //这个函数的目的应该是对应论文中3.3节，已经知道了稠密点云，如何估计每个grid的高度值
+  mosaic.process(point_cloud, point_cloud_intensities, map.getMutable());//最为核心的函数！！！！！ 整个代码就这里调用了这个函数！！！！！
 
   LOG(INFO) << "Publish until shutdown.";
   map.publishUntilShutdown();

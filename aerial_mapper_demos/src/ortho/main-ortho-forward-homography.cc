@@ -48,11 +48,9 @@ int main(int argc, char** argv) {
 
   // Parse input parameters.
   const std::string& base = FLAGS_forward_homography_data_directory;
-  const std::string& filename_camera_rig =
-      FLAGS_forward_homography_filename_camera_rig;
+  const std::string& filename_camera_rig = FLAGS_forward_homography_filename_camera_rig;
   const std::string& filename_poses = FLAGS_forward_homography_filename_poses;
-  const std::string& filename_images =
-      base + FLAGS_forward_homography_prefix_images;
+  const std::string& filename_images = base + FLAGS_forward_homography_prefix_images;
   const Eigen::Vector3d origin(FLAGS_forward_homography_origin_easting_m,
                                FLAGS_forward_homography_origin_northing_m,
                                FLAGS_forward_homography_origin_elevation_m);
@@ -60,8 +58,7 @@ int main(int argc, char** argv) {
   // Load camera rig from file.
   io::AerialMapperIO io_handler;
   const std::string& filename_camera_rig_yaml = base + filename_camera_rig;
-  std::shared_ptr<aslam::NCamera> ncameras =
-      io_handler.loadCameraRigFromFile(filename_camera_rig_yaml);
+  std::shared_ptr<aslam::NCamera> ncameras =  io_handler.loadCameraRigFromFile(filename_camera_rig_yaml);
   CHECK(ncameras);
 
   // Load body poses from file.
@@ -78,12 +75,9 @@ int main(int argc, char** argv) {
   // Construct the mosaic by computing the homography that projects
   // the image onto the ground plane.
   ortho::Settings settings_ortho;
-  settings_ortho.ground_plane_elevation_m =
-      FLAGS_forward_homography_ground_plane_elevation_m;
-  settings_ortho.height_mosaic_pixels =
-      FLAGS_forward_homography_height_mosaic_pixels;
-  settings_ortho.width_mosaic_pixels =
-      FLAGS_forward_homography_width_mosaic_pixels;
+  settings_ortho.ground_plane_elevation_m = FLAGS_forward_homography_ground_plane_elevation_m;
+  settings_ortho.height_mosaic_pixels = FLAGS_forward_homography_height_mosaic_pixels;
+  settings_ortho.width_mosaic_pixels = FLAGS_forward_homography_width_mosaic_pixels;
   settings_ortho.origin = origin;
 
   CHECK(ncameras);
@@ -95,10 +89,10 @@ int main(int argc, char** argv) {
       const Image& image = images[i];
       CHECK(i < T_G_Bs.size());
       const Pose& T_G_B = T_G_Bs[i];
-      mosaic.updateOrthomosaic(T_G_B, image);
+      mosaic.updateOrthomosaic(T_G_B, image);//非常重要的函数！！！！
     }
   } else {
-    mosaic.batch(T_G_Bs, images);
+    mosaic.batch(T_G_Bs, images);//非常重要的函数！！！！
   }
 
   return 0;

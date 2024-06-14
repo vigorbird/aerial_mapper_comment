@@ -121,16 +121,11 @@ int main(int argc, char** argv) {
 
   // Set up orthomosaic.
   ortho::Settings settings_ortho;
-  settings_ortho.show_orthomosaic_opencv =
-      FLAGS_backward_grid_show_orthomosaic_opencv;
-  settings_ortho.save_orthomosaic_jpg =
-      FLAGS_backward_grid_save_orthomosaic_jpg;
-  settings_ortho.orthomosaic_jpg_filename =
-      FLAGS_backward_grid_orthomosaic_jpg_filename;
-  settings_ortho.orthomosaic_elevation_m =
-      FLAGS_backward_grid_orthomosaic_elevation_m;
-  settings_ortho.use_digital_elevation_map =
-      FLAGS_backward_grid_use_digital_elevation_map;
+  settings_ortho.show_orthomosaic_opencv =  FLAGS_backward_grid_show_orthomosaic_opencv;
+  settings_ortho.save_orthomosaic_jpg = FLAGS_backward_grid_save_orthomosaic_jpg;
+  settings_ortho.orthomosaic_jpg_filename = FLAGS_backward_grid_orthomosaic_jpg_filename;
+  settings_ortho.orthomosaic_elevation_m = FLAGS_backward_grid_orthomosaic_elevation_m;
+  settings_ortho.use_digital_elevation_map = FLAGS_backward_grid_use_digital_elevation_map;
   settings_ortho.colored_ortho = FLAGS_backward_grid_colored_ortho;
   settings_ortho.use_multi_threads = FLAGS_backward_grid_use_multi_threads;
   ortho::OrthoBackwardGrid mosaic(ncameras, settings_ortho, map.getMutable());
@@ -150,7 +145,7 @@ int main(int argc, char** argv) {
 
       if (pcl_cnt > 0) {
         LOG(INFO) << "Filling DSM with " << point_cloud.size() << " points";
-        digital_surface_map.process(point_cloud, map.getMutable());
+        digital_surface_map.process(point_cloud, map.getMutable());//获取grid的高度值
 
         LOG(INFO) << "Updating orthomosaic layer with " << T_G_Bs_subset.size()
                   << " image-pose-pairs";

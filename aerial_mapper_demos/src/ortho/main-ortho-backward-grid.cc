@@ -73,16 +73,14 @@ int main(int argc, char** argv) {
 
   // Parse input parameters.
   const std::string& base = FLAGS_backward_grid_data_directory;
-  const std::string& filename_camera_rig =
-      FLAGS_backward_grid_filename_camera_rig;
+  const std::string& filename_camera_rig = FLAGS_backward_grid_filename_camera_rig;
   const std::string& filename_poses = FLAGS_backward_grid_filename_poses;
   const std::string& filename_images = base + FLAGS_backward_grid_prefix_images;
 
   // Load camera rig from file.
   io::AerialMapperIO io_handler;
   const std::string& filename_camera_rig_yaml = base + filename_camera_rig;
-  std::shared_ptr<aslam::NCamera> ncameras =
-      io_handler.loadCameraRigFromFile(filename_camera_rig_yaml);
+  std::shared_ptr<aslam::NCamera> ncameras = io_handler.loadCameraRigFromFile(filename_camera_rig_yaml);
   CHECK(ncameras);
 
   // Load body poses from file.
@@ -118,8 +116,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Initialize layered map.";
   grid_map::Settings settings_aerial_grid_map;
   settings_aerial_grid_map.center_easting = FLAGS_backward_grid_center_easting;
-  settings_aerial_grid_map.center_northing =
-      FLAGS_backward_grid_center_northing;
+  settings_aerial_grid_map.center_northing = FLAGS_backward_grid_center_northing;
   settings_aerial_grid_map.delta_easting = FLAGS_backward_grid_delta_easting;
   settings_aerial_grid_map.delta_northing = FLAGS_backward_grid_delta_northing;
   settings_aerial_grid_map.resolution = FLAGS_backward_grid_resolution;
@@ -130,7 +127,8 @@ int main(int argc, char** argv) {
   settings_dsm.center_easting = settings_aerial_grid_map.center_easting;
   settings_dsm.center_northing = settings_aerial_grid_map.center_northing;
   dsm::Dsm digital_surface_map(settings_dsm, map.getMutable());
-  digital_surface_map.process(point_cloud, map.getMutable());
+  //这个函数的主要目的是，根据所有输入的三维点坐标，计算每个gird的z值
+  digital_surface_map.process(point_cloud, map.getMutable());//非常重要的函数！！！！！！！！！
 
   LOG(INFO) << "Construct the orthomosaic (batch).";
   ortho::Settings settings_ortho;
@@ -138,7 +136,8 @@ int main(int argc, char** argv) {
   ortho::OrthoBackwardGrid mosaic(ncameras, settings_ortho, map.getMutable());
   // Orthomosaic via back-projecting cell center into image
   // and quering pixel intensity in image.
-  mosaic.process(T_G_Bs, images, map.getMutable());
+  //将已经重建得到的grid重投影回每个图像，然后为每个grid附上颜色！
+  mosaic.process(T_G_Bs, images, map.getMutable());//非常重要的函数！！！！！！！
 
   LOG(INFO) << "Publish until shutdown.";
   map.publishUntilShutdown();

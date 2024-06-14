@@ -17,6 +17,7 @@ OrthoFromPcl::OrthoFromPcl(const Settings& settings) : settings_(settings) {
   printParams();
 }
 
+
 void OrthoFromPcl::process(
     const AlignedType<std::vector, Eigen::Vector3d>::type& pointcloud,
     const std::vector<int>& intensities, grid_map::GridMap* map) const {
@@ -55,16 +56,14 @@ void OrthoFromPcl::process(
     double x = index(0);
     double y = index(1);
     std::vector<std::pair<int, double> > indices_dists;
-    nanoflann::RadiusResultSet<double, int> result_set(
-        settings_.interpolation_radius, indices_dists);
+    nanoflann::RadiusResultSet<double, int> result_set( settings_.interpolation_radius, indices_dists);
     const double query_pt[3] = {position.x(), position.y(), 0.0};
     kd_tree.findNeighbors(result_set, query_pt, nanoflann::SearchParams());
     // Adaptive interpolation.
     if (settings_.use_adaptive_interpolation) {
       int lambda = 10;
       while (result_set.size() == 0u) {
-        nanoflann::RadiusResultSet<double, int> tmp(
-            lambda * settings_.interpolation_radius, indices_dists);
+        nanoflann::RadiusResultSet<double, int> tmp( lambda * settings_.interpolation_radius, indices_dists);
         kd_tree.findNeighbors(tmp, query_pt, nanoflann::SearchParams());
         lambda *= 10;
       }
@@ -110,7 +109,7 @@ void OrthoFromPcl::process(
   const ros::Time time2 = ros::Time::now();
   const ros::Duration& delta_time = time2 - time1;
   LOG(INFO) << "Time elapsed: " << delta_time;
-}
+}//end function process
 
 void OrthoFromPcl::printParams() const {
   std::stringstream out;

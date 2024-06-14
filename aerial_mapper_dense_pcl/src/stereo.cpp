@@ -26,9 +26,10 @@ Stereo::Stereo(const std::shared_ptr<aslam::NCamera> ncameras,
   // Undistorter.
   static constexpr float undistortion_alpha = 1.0;
   static constexpr float undistortion_scale = 1.0;
-  undistorter_ = aslam::createMappedUndistorter(
-      ncameras_->getCamera(kFrameIdx), undistortion_alpha, undistortion_scale,
-      aslam::InterpolationMethod::Linear);
+  undistorter_ = aslam::createMappedUndistorter( ncameras_->getCamera(kFrameIdx), 
+                                                  undistortion_alpha,
+                                                  undistortion_scale,
+                                                  aslam::InterpolationMethod::Linear);
 
   rectifier_.reset(new Rectifier(image_resolution));
   densifier_.reset(new Densifier(block_matching_params, image_resolution));
